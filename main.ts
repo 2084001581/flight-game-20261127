@@ -120,8 +120,14 @@ function selfCheck(here) {
 
 function handIn(here, out) {
   if (resolve(out) === resolve('/')) fail('hand-in', 'refusing to write into /');
-  rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
+  // Clear the output directory's contents without removing the directory
+  // itself: in the grader /output is a mount point the runner cannot unlink
+  // (its parent is read-only), so rmSync(out) dies with EACCES and the whole
+  // run exits 1. Emptying the children keeps the same clean-output promise.
+  for (const name of readdirSync(out)) {
+    rmSync(join(out, name), { recursive: true, force: true });
+  }
   cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
   log('hand-in', 'copied game/ to output');
   mkdirSync(join(out, 'screenshots'), { recursive: true });
